@@ -1,7 +1,9 @@
 import Phaser from "phaser";
+import ScoreLabel from "./ui/ScoreLabel";
 
 const GROUND_KEY = "ground";
 const DUDE_KEY = "dude";
+const STAR_KEY = "star";
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -9,12 +11,13 @@ export default class GameScene extends Phaser.Scene {
 
     this.player = undefined;
     this.cursors = undefined;
+    this.scoreLabel = undefined;
   }
 
   preload() {
     this.load.image("sky", "assets/sky.png");
     this.load.image(GROUND_KEY, "assets/platform.png");
-    this.load.image("star", "assets/star.png");
+    this.load.image(STAR_KEY, "assets/star.png");
     this.load.image("bomb", "assets/bomb.png");
 
     this.load.spritesheet(DUDE_KEY, "assets/dude.png", {
@@ -27,9 +30,15 @@ export default class GameScene extends Phaser.Scene {
     this.add.image(400, 300, "sky");
 
     const platforms = this.createPlatforms();
+    const stars = this.createStars();
     this.player = this.createPlayer();
 
+    this.scoreLabel = this.createScoreLabel(16, 16, 0);
+
     this.physics.add.collider(this.player, platforms);
+    this.physics.add.collider(stars, platforms);
+
+    this.physics.add.overlap(this.player, stars, this.collectStar, null, this);
 
     this.cursors = this.input.keyboard.createCursorKeys();
   }
@@ -88,5 +97,34 @@ export default class GameScene extends Phaser.Scene {
       repeat: -1,
     });
     return player;
+  }
+
+  createStars() {
+    const stars = this.physics.add.group({
+      key: STAR_KEY,
+      repeat: 11,
+      setXY: { x: 12, y: 0, stepX: 70 },
+    });
+
+    stars.children.iterate((child) => {
+      child.setBounceY(Phaser.Math.FloatBetween(0.2, 0.4));
+    });
+
+    return stars;
+  }
+
+  collectStar(player, star) {
+    star.disableBody(true, true);
+
+    this.scoreLabel.add(10);
+  }
+
+  createScoreLabel(x, y, score) {
+    const style = { fontSize: "32px", fill: "#000" };
+    const label = new ScoreLabel(this, x, y, score, style);
+
+    this.add.existing(label);
+
+    return label;
   }
 }
