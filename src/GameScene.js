@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import ScoreLabel from "./ui/ScoreLabel";
 import BombSpawner from "./BombSpawner";
+import StarSpawner from "./StarSpawner";
 
 const GROUND_KEY = "ground";
 const DUDE_KEY = "dude";
@@ -14,7 +15,7 @@ export default class GameScene extends Phaser.Scene {
     this.player = undefined;
     this.cursors = undefined;
     this.scoreLabel = undefined;
-    this.start = undefined;
+    this.starSpawner = undefined;
     this.bombSpawner = undefined;
 
     this.gameOver = false;
@@ -37,7 +38,9 @@ export default class GameScene extends Phaser.Scene {
 
     const platforms = this.createPlatforms();
     this.player = this.createPlayer();
-    this.stars = this.createStars();
+
+    this.starSpawner = new StarSpawner(this, STAR_KEY);
+    const starGroup = this.starSpawner.group;
 
     this.scoreLabel = this.createScoreLabel(16, 16, 0);
 
@@ -45,7 +48,7 @@ export default class GameScene extends Phaser.Scene {
     const bombsGroup = this.bombSpawner.group;
 
     this.physics.add.collider(this.player, platforms);
-    this.physics.add.collider(this.stars, platforms);
+    this.physics.add.collider(starGroup, platforms);
     this.physics.add.collider(bombsGroup, platforms);
     this.physics.add.collider(
       this.player,
@@ -57,7 +60,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.physics.add.overlap(
       this.player,
-      this.stars,
+      starGroup,
       this.collectStar,
       null,
       this
@@ -126,30 +129,12 @@ export default class GameScene extends Phaser.Scene {
     return player;
   }
 
-  createStars() {
-    const stars = this.physics.add.group({
-      key: STAR_KEY,
-      repeat: 11,
-      setXY: { x: 12, y: 0, stepX: 70 },
-    });
-
-    stars.children.iterate((child) => {
-      child.setBounceY(Phaser.Math.FloatBetween(0.2, 0.4));
-    });
-
-    return stars;
-  }
-
   collectStar(player, star) {
     star.disableBody(true, true);
 
     this.scoreLabel.add(10);
 
-    if (this.stars.countActive(true) === 0) {
-      this.stars.children.iterate((child) => {
-        child.enableBody(true, child.x, 0, true, true);
-      });
-    }
+    this.starSpawner.checkAllStars();
 
     this.bombSpawner.spawn(player.x);
   }
