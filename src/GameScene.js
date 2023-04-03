@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import ScoreLabel from "./ui/ScoreLabel";
 import BombSpawner from "./BombSpawner";
 import StarSpawner from "./StarSpawner";
+import Player from "./Player";
 
 const GROUND_KEY = "ground";
 const DUDE_KEY = "dude";
@@ -12,7 +13,7 @@ export default class GameScene extends Phaser.Scene {
   constructor() {
     super("game-scene");
 
-    this.player = undefined;
+    this.playerManager = undefined;
     this.cursors = undefined;
     this.scoreLabel = undefined;
     this.starSpawner = undefined;
@@ -37,7 +38,9 @@ export default class GameScene extends Phaser.Scene {
     this.add.image(400, 300, "sky");
 
     const platforms = this.createPlatforms();
-    this.player = this.createPlayer();
+
+    this.playerManager = new Player(this, DUDE_KEY);
+    const player = this.playerManager.player;
 
     this.starSpawner = new StarSpawner(this, STAR_KEY);
     const starGroup = this.starSpawner.group;
@@ -47,24 +50,12 @@ export default class GameScene extends Phaser.Scene {
     this.bombSpawner = new BombSpawner(this, BOMB_KEY);
     const bombsGroup = this.bombSpawner.group;
 
-    this.physics.add.collider(this.player, platforms);
+    this.physics.add.collider(player, platforms);
     this.physics.add.collider(starGroup, platforms);
     this.physics.add.collider(bombsGroup, platforms);
-    this.physics.add.collider(
-      this.player,
-      bombsGroup,
-      this.hitBomb,
-      null,
-      this
-    );
+    this.physics.add.collider(player, bombsGroup, this.hitBomb, null, this);
 
-    this.physics.add.overlap(
-      this.player,
-      starGroup,
-      this.collectStar,
-      null,
-      this
-    );
+    this.physics.add.overlap(player, starGroup, this.collectStar, null, this);
 
     this.cursors = this.input.keyboard.createCursorKeys();
   }
@@ -75,18 +66,18 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (this.cursors.left.isDown) {
-      this.player.setVelocityX(-160);
-      this.player.anims.play("left", true);
+      this.playerManager.moveLeft();
     } else if (this.cursors.right.isDown) {
-      this.player.setVelocityX(160);
-      this.player.anims.play("right", true);
+      this.playerManager.moveRight();
     } else {
-      this.player.setVelocityX(0);
-      this.player.anims.play("turn");
+      this.playerManager.stop();
     }
 
-    if (this.cursors.up.isDown && this.player.body.touching.down) {
-      this.player.setVelocityY(-330);
+    if (
+      this.cursors.up.isDown &&
+      this.playerManager.player.body.touching.down
+    ) {
+      this.playerManager.jump();
     }
   }
 
@@ -100,33 +91,6 @@ export default class GameScene extends Phaser.Scene {
     platforms.create(750, 220, GROUND_KEY);
 
     return platforms;
-  }
-
-  createPlayer() {
-    const player = this.physics.add.sprite(100, 450, DUDE_KEY);
-    player.setBounce(0.2);
-    player.setCollideWorldBounds(true);
-
-    this.anims.create({
-      key: "left",
-      frames: this.anims.generateFrameNumbers(DUDE_KEY, { start: 0, end: 3 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-
-    this.anims.create({
-      key: "turn",
-      frames: [{ key: DUDE_KEY, frame: 4 }],
-      frameRate: 20,
-    });
-
-    this.anims.create({
-      key: "right",
-      frames: this.anims.generateFrameNumbers(DUDE_KEY, { start: 5, end: 8 }),
-      frameRate: 10,
-      repeat: -1,
-    });
-    return player;
   }
 
   collectStar(player, star) {
